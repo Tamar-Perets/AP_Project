@@ -13,25 +13,29 @@
     <div id="network-container"></div>
 
     <script type="text/javascript">
-        // Define Nodes (Topics = Box, Agents = Circle)
         var nodes = new vis.DataSet([
-		// Define Nodes (Topics = Box, Agents = Circle)
-		    var nodes = new vis.DataSet([
-		        // DYNAMIC_NODES_HERE
-		    ]);
+            // DYNAMIC_NODES_HERE
+        ]);
 
-		    // Define Edges (Directed Arrows)
-		    var edges = new vis.DataSet([
-		        // DYNAMIC_EDGES_HERE
-		    ]);
+        var edges = new vis.DataSet([
+            // DYNAMIC_EDGES_HERE
+        ]);
 
         var container = document.getElementById('network-container');
         var data = { nodes: nodes, edges: edges };
+
         var options = {
-            physics: { enabled: true, repulsion: { nodeDistance: 100 } }
+            nodes: {
+                font: { size: 16 }
+            },
+            edges: {
+                arrows: "to"
+            },
+            physics: {
+                enabled: true
+            }
         };
-        
-        // Initialize Graph
+
         var network = new vis.Network(container, data, options);
     </script>
 </body>
