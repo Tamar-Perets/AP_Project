@@ -1,3 +1,4 @@
+import servlets.ConfLoader;
 import servlets.HtmlLoader;
 import server.MyHTTPServer;
 import server.HTTPServer;
@@ -12,6 +13,7 @@ public class Main {
 
         // Add the HtmlLoader Servlet
         server.addServlet("GET", "/app/", new HtmlLoader("html_files"));
+        server.addServlet("POST", "/upload", new ConfLoader());
 
         server.start();
         System.out.println("Server is running. Press Enter to stop.");

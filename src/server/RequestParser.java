@@ -101,8 +101,12 @@ public class RequestParser {
 
             if (curLine.isEmpty()) {
                 if (pastSeparator) {
-                    // empty line after content started -> end of content
-                    break;
+                    /* Old Version (grade 100):
+                     * // empty line after content started -> end of content
+                    break;*/
+                	// new version:
+                	contentBuffer.write('\n');
+                    continue;
                 }
 
                 // first empty line after extra parameters section
