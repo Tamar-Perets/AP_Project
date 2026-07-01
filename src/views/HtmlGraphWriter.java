@@ -2,30 +2,33 @@ package views;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
 import configs.Graph;
+import configs.Node;
 
 public class HtmlGraphWriter {
 	
 	// this method get graph and return list of strings that are html describe of the graph
-    public static List<String> getGraphHTML(Graph graph) {
+	// i.e generates an HTML representation of the provided computational graph
+    public static List<String> getGraphHTML(Graph graph, String templateDir) {
         List<String> outputHtml = new ArrayList<>();
         
         // path to graph file 
-        String templatePath = "html_files/graph.html";
+        Path templatePath = Paths.get(templateDir, "graph.html");
 
         try {
-            // טעינת כל שורות קובץ ה-HTML לרשימה
-            List<String> lines = Files.readAllLines(Paths.get(templatePath));
+            // load all html file lines into a list
+        	List<String> lines = Files.readAllLines(templatePath);
 
-            // בניית המחרוזות הדינמיות מתוך אובייקט הגרף
+            // build dynamic string from the graph
             String dynamicNodes = buildNodesJS(graph);
             String dynamicEdges = buildEdgesJS(graph);
 
-            // מעבר על שורות הקובץ והחלפת הסמנים במידע האמיתי
+            // go over the file line's, replacing the MARKs with the real data
             for (String line : lines) {
                 if (line.contains("// DYNAMIC_NODES_HERE")) {
                     outputHtml.add(dynamicNodes);
@@ -46,24 +49,35 @@ public class HtmlGraphWriter {
     private static String buildNodesJS(Graph graph) {
         StringBuilder sb = new StringBuilder();
         
-        /* * TODO: Iterate over your Graph's Topics and Agents.
-         * For each Topic, append a string like this:
-         * sb.append("{ id: '").append(topicName).append("', label: '").append(topicName).append("', shape: 'box', color: '#a2d5f2' },\n");
-         * * For each Agent, append a string like this:
-         * sb.append("{ id: '").append(agentName).append("', label: '").append(agentName).append("', shape: 'circle', color: '#ffb3ba' },\n");
-         */
-         
+        for (Node node: graph) {
+        	// seperate node name to type (first letter) and name
+        	char type = node.getName().charAt(0);
+        	String name = node.getName().substring(1);
+        	
+        	// For each Topic-node append square node, For each Agent-node append circle node
+        	if (type == 'T')
+        		sb.append("{ id: '").append(name).append("', label: '").append(name).append("', shape: 'box', color: '#a2d5f2' },\n");
+        	else if (type == 'A')
+        		sb.append("{ id: '").append(name).append("', label: '").append(name).append("', shape: 'circle', color: '#ffb3ba' },\n");
+        }
+        
         return sb.toString();
     }
 
     private static String buildEdgesJS(Graph graph) {
          StringBuilder sb = new StringBuilder();
          
-         /*
-          * TODO: Iterate over your Graph's dependencies/edges.
-          * For each edge, append a string representing the arrow:
-          * sb.append("{ from: '").append(sourceName).append("', to: '").append(targetName).append("', arrows: 'to' },\n");
-          */
+         // go over the nodes
+         for (Node node: graph) {
+        	 List<Node> edges = node.getEdges();
+        	 String nodeName= node.getName().substring(1);
+        	 
+        	 //  go over the neighbors, add edge for each neighbor
+        	 for (Node neighbor : edges) {
+        		 String neighborName= neighbor.getName().substring(1);
+        		 sb.append("{ from: '").append(nodeName).append("', to: '").append(neighborName).append("', arrows: 'to' },\n");
+        	 }	 
+         }     
           
          return sb.toString();
     }
