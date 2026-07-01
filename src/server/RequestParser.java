@@ -1,6 +1,7 @@
 package server; // package server
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -15,7 +16,8 @@ public class RequestParser {
     public static RequestInfo parseRequest(BufferedReader reader) throws IOException {        
 		// read the first line of the request
     	String firstLine = reader.readLine();
-        if (firstLine == null) return null;
+        if (firstLine == null || firstLine.isEmpty()) 
+        	return new RequestInfo("", "", new String[0], new HashMap<>(), new byte[0]);;
         
         // ** extract method
         // split to method and uri
@@ -25,7 +27,7 @@ public class RequestParser {
         // Basic validation: Check if command is GET, POST, or DELETE
         if (!command.equals("GET") && !command.equals("POST") && !command.equals("DELETE")) {
             // TODO throw new IOException("Method not allowed: " + command);
-        	return null;
+        	return new RequestInfo("", "", new String[0], new HashMap<>(), new byte[0]);
         }
         
         // ** extract parameters and handle uri
@@ -84,61 +86,56 @@ public class RequestParser {
         
         /**/
         // read the content (and form-parameters if there are)
-
-	     // read the body: optional extra parameters section, then content section
-	     byte[] content = new byte[0];
-	
-	     if (contentLength > 0) {
-	         StringBuilder rawBody = new StringBuilder();
-	
-	         // Read only characters that are already available.
-	         // This avoids blocking on Socket when body has no trailing newline.
-	         while (reader.ready()) {
-	             int ch = reader.read();
-	             if (ch == -1) {
-	                 break;
-	             }
-	             rawBody.append((char) ch);
-	         }
-	
-	         String normalizedBody = rawBody.toString().replace("\r\n", "\n");
-	
-	         StringBuilder bodyText = new StringBuilder();
-	         boolean pastSeparator = false;
-	
-	         String[] lines = normalizedBody.split("\n", -1);
-	
-	         for (String curLine : lines) {
-	             if (curLine.isEmpty()) {
-	                 pastSeparator = true;
-	                 continue;
-	             }
-	
-	             if (!pastSeparator) {
-	                 int eqIdx = curLine.indexOf('=');
-	
-	                 if (eqIdx >= 0) {
-	                     String key = curLine.substring(0, eqIdx);
-	                     String value = curLine.substring(eqIdx + 1);
-	
-	                     if (!key.isEmpty()) {
-	                         parameters.put(key, value);
-	                     }
-	                 } else {
-	                     // No metadata section exists.
-	                     // This line is probably actual content immediately after headers.
-	                     pastSeparator = true;
-	                     bodyText.append(curLine).append('\n');
-	                 }
-	             } else {
-	                 bodyText.append(curLine).append('\n');
-	             }
-	         }
-	
-	         content = bodyText.toString().getBytes(StandardCharsets.UTF_8);
-	     }
-                
         
+     // read body: optional extra parameters section, then content section
+        ByteArrayOutputStream contentBuffer = new ByteArrayOutputStream();
+
+        boolean pastSeparator = false;
+
+        while (reader.ready()) {
+            String curLine = reader.readLine();
+
+            if (curLine == null) {
+                break;
+            }
+
+            if (curLine.isEmpty()) {
+                if (pastSeparator) {
+                    // empty line after content started -> end of content
+                    break;
+                }
+
+                // first empty line after extra parameters section
+                pastSeparator = true;
+                continue;
+            }
+
+            if (!pastSeparator) {
+                int eqIdx = curLine.indexOf('=');
+
+                if (eqIdx >= 0) {
+                    String key = curLine.substring(0, eqIdx);
+                    String value = curLine.substring(eqIdx + 1);
+
+                    if (!key.isEmpty()) {
+                        parameters.put(key, value);
+                    }
+                } else {
+                    // no extra-parameters section exists,
+                    // so this line is probably the beginning of the content
+                    pastSeparator = true;
+                    contentBuffer.write(curLine.getBytes(StandardCharsets.UTF_8));
+                    contentBuffer.write('\n');
+                }
+            } else {
+                contentBuffer.write(curLine.getBytes(StandardCharsets.UTF_8));
+                contentBuffer.write('\n');
+            }
+        }
+
+        byte[] content = contentBuffer.toByteArray();
+        
+	    
         // create and return RequestInfo object that has all neccessary data
         return new RequestInfo(command, fullUri, uriSegments, parameters, content);
     }
@@ -158,23 +155,28 @@ public class RequestParser {
             this.parameters = parameters;
             this.content = content;
         }
-
+        
+        // return http method (for example GET, POST, etc.)
         public String getHttpCommand() {
             return httpCommand;
         }
-
+        
+        // return full uri (for example /api/resource?id=123&name=test)
         public String getUri() {
             return uri;
         }
-
+        
+        // return the segments of the uri (for example “resource “,”api").
         public String[] getUriSegments() {
             return uriSegments;
         }
-
+        
+        // return map of parameters (keys) and their value (for example id = 123, name = test)
         public Map<String, String> getParameters() {
             return parameters;
         }
-
+        
+        // return http request content
         public byte[] getContent() {
             return content;
         }

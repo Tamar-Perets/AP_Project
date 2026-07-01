@@ -4,16 +4,17 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import server.RequestParser.RequestInfo;
@@ -47,9 +48,7 @@ public class MyHTTPServer extends Thread implements HTTPServer{
     
     // start
     @Override
-    public synchronized void start() {
-    	if (this.serverSocket != null) return;
-    	
+    public synchronized void start() {	
 		if (this.serverSocket != null) {
 		        return; // already started
 		    }
@@ -128,112 +127,118 @@ public class MyHTTPServer extends Thread implements HTTPServer{
     	}
     }
     
-    
-    @Override
-    public void run(){
-    	
-    	System.out.println("Server is listening on port " + this.port);
-    	
-    	while(!stop) {
-    		// wait for request from the client
-    		Socket clientSocket;
-    		try {
-    			clientSocket = this.serverSocket.accept();
-    			System.out.println("Client connected: " + clientSocket.getRemoteSocketAddress());
+    // this method is the main method run (handle requests & clients etc.)
+	    @Override
+	public void run() {
+	    while (!stop) {
+	        Socket clientSocket = null;
+	
+	        try {
+	            clientSocket = this.serverSocket.accept();
+	
+	            if (this.threadPool == null || this.threadPool.isShutdown()) {
+	                clientSocket.close();
+	                continue;
+	            }
+	
+	            final Socket socketForTask = clientSocket;
+	
+	            try {
+	                this.threadPool.submit(() -> {
+	                    handleClientInsideRun(socketForTask);
+	                });
+	            } catch (RejectedExecutionException e) {
+	                try {
+	                    socketForTask.close();
+	                } catch (IOException ignored) {
+	                }
+	            }
+	
+	        } catch (java.net.SocketTimeoutException e) {
+	            // normal: wake up and check stop flag
+	            continue;
+	
+	        } catch (SocketException e) {
+	            if (stop) {
+	                break;
+	            }
+	
+	        } catch (IOException e) {
+	            if (!stop) {
+	                System.out.println("Server socket is closed or failed to accept: " + e.getMessage());
+	            }
+	            // do not necessarily kill the server on one accept error
+	            continue;
+	        }
+	    }
+	}
+	 
+	// this method handle specific client
+    private void handleClientInsideRun(Socket clientSocket) {
+        try {
+            RequestInfo ri = RequestParser.parseRequest(
+                new BufferedReader(
+                    new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8)
+                )
+            );
 
-			} catch (java.net.SocketTimeoutException e) {
-			    continue;
-			} catch (IOException e) {
-			    if (!stop) {
-			        System.out.println("Server socket is closed or failed to accept: " + e.getMessage());
-			    }
-			    continue;
-			}
+            if (ri == null || ri.getHttpCommand() == null || ri.getHttpCommand().isEmpty()) {
+                return;
+            }
 
-    		
-    		// when request received:
-    		
-    		// open new thread to handle the query
-    		this.threadPool.submit(() -> {
-    		    RequestInfo ri = null;
-    		    try {
-    		        // define timeour of waiting for client message
-    		        //clientSocket.setSoTimeout(5000); // TODO
-    		        
-    		        // analyze the client request
-					ri = RequestParser.parseRequest(
-					    new BufferedReader(
-					        new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8)
-					    )
-					);
+            Map<String, Servlet> map;
 
-    		        
-    		        if (ri != null) {    		        	
-    		        	// take the corresponding map
-    		        	Map<String, Servlet> map;
-    		        	switch(ri.getHttpCommand()) {
-    		        	case "GET":
-    		        		map = this.getMap;
-    		        		break;
-    		        	case "POST":
-    		        		map = this.postMap;
-    		        		break;
-    		        	case "DELETE":
-    		        		map = this.deleteMap;
-    		        		break;
-    		        	default:
-    		                System.out.println("Method not supported (should be GET / POST / DELETE)");
-    		                return;
-    		        	}
-    		        	
-    		        	// find the corresponding servlet (longest match)
-						String requestUri = ri.getUri();
-						Servlet s = null;
-						String longestMatch = null;
-						
-						for (String prefix : map.keySet()) {
-						    if (requestUri.startsWith(prefix)) {
-						        if (longestMatch == null || prefix.length() > longestMatch.length()) {
-						            longestMatch = prefix;
-						        }
-						    }
-						}
-						
-						if (longestMatch != null) {
-						    s = map.get(longestMatch);
-						}
+            switch (ri.getHttpCommand()) {
+                case "GET":
+                    map = this.getMap;
+                    break;
+                case "POST":
+                    map = this.postMap;
+                    break;
+                case "DELETE":
+                    map = this.deleteMap;
+                    break;
+                default:
+                    return;
+            }
 
-    		        	
-    		        	if (s == null) {
-    		        	    OutputStream out = clientSocket.getOutputStream();
-    		        	    out.write("HTTP/1.1 404 Not Found\r\n\r\n".getBytes(StandardCharsets.UTF_8));
-    		        	    out.flush();
-    		        	}
-    		        	else {
-    		        		{
-    		        		    OutputStream out = clientSocket.getOutputStream();
-    		        		    out.write("HTTP/1.1 404 Not Found\r\n\r\n".getBytes(StandardCharsets.UTF_8));
-    		        		    out.flush();
-    		        		}
-    		        	}	
-    		        } 
-    		    } catch (IOException e) {
-    		    	// something went wrong with the client (maybe read from its socket)
-    		        System.out.println("Error reading/parsing request from client: " + e.getMessage());
-    		    } finally {
-    		    	// after handling the client \ some error
-    		        // disconnect the client (close the client socket)
-    		        try {
-    		            clientSocket.close();
-    		        } catch (IOException e) {
-    		            e.printStackTrace();
-    		        }
-    		    }
-    		});
-    		
+            String requestUri = ri.getUri();
+            Servlet s = null;
+            String longestMatch = null;
 
-    		
-    	}	// end of while
+            if (requestUri != null) {
+                for (String prefix : map.keySet()) {
+                    if (prefix != null && requestUri.startsWith(prefix)) {
+                        if (longestMatch == null || prefix.length() > longestMatch.length()) {
+                            longestMatch = prefix;
+                        }
+                    }
+                }
+            }
+
+            if (longestMatch != null) {
+                s = map.get(longestMatch);
+            }
+
+            OutputStream out = clientSocket.getOutputStream();
+
+            if (s == null) {
+                out.write("HTTP/1.1 404 Not Found\r\n\r\n".getBytes(StandardCharsets.UTF_8));
+            } else {
+                s.handle(ri, out);
+            }
+
+            out.flush();
+
+        } catch (IOException e) {
+            // keep silent / do not throw outside worker
+        } finally {
+            try {
+                clientSocket.close();
+            } catch (IOException e) {
+                // ignore
+            }
+        }
     }
     
     // this method close the server, including close all running threads etc.
@@ -280,8 +285,6 @@ public class MyHTTPServer extends Thread implements HTTPServer{
 		}
 
     }
-    
-   
-
+  
 
 }
