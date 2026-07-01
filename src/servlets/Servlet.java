@@ -3,6 +3,7 @@ package servlets; // package servlets
 import java.io.IOException;
 import java.io.OutputStream;
 
+import server.RequestParser;
 import server.RequestParser.RequestInfo;
 
 public interface Servlet {
