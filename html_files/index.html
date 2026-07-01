@@ -1,0 +1,38 @@
+<!-- This file orgenize the general view of the page -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Advanced Programming Project</title>
+    <style>
+        body { 
+            display: flex; 
+            height: 100vh; 
+            margin: 0; 
+            font-family: Arial, sans-serif; 
+            background-color: #f4f4f9;
+        }
+        .left-panel { width: 30%; border-right: 2px solid #ccc; background: #fff; }
+        .center-panel { width: 55%; border-right: 2px solid #ccc; background: #fafafa; }
+        .right-panel { width: 15%; background: #fff; display: flex;}
+        
+        iframe { width: 100%; height: 100%; border: none; }
+    </style>
+</head>
+<body>
+	<!-- Where the user can upload files and send messages to different topics -->
+    <div class="left-panel">
+        <iframe name="form_frame" src="form.html"></iframe>
+    </div>
+	
+	<!-- View of the upload computetional graph (default: empty file) -->
+    <div class="center-panel">
+        <iframe name="graph_frame" src="temp.html"></iframe>
+    </div>
+	
+	<!-- Tables of values (default: empty file) -->
+    <div class="right-panel">
+        <iframe name="table_frame" src="temp.html"></iframe>
+    </div>
+</body>
+</html>

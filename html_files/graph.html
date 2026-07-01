@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Computational Graph</title>
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; }
+        #network-container { width: 100%; height: 100%; border: none; }
+    </style>
+</head>
+<body>
+    <div id="network-container"></div>
+
+    <script type="text/javascript">
+        // Define Nodes (Topics = Box, Agents = Circle)
+        var nodes = new vis.DataSet([
+            { id: 'A', label: 'A', shape: 'box', color: '#a2d5f2' },
+            { id: 'B', label: 'B', shape: 'box', color: '#a2d5f2' },
+            
+            { id: 'plus', label: '+', shape: 'circle', color: '#ffb3ba' },
+            { id: 'minus', label: '-', shape: 'circle', color: '#ffb3ba' },
+            { id: 'mul', label: '*', shape: 'circle', color: '#ffb3ba' },
+            
+            { id: 'A_plus_B', label: 'A+B', shape: 'box', color: '#a2d5f2' },
+            { id: 'A_minus_B', label: 'A-B', shape: 'box', color: '#a2d5f2' },
+            { id: 'Result', label: 'Result', shape: 'box', color: '#b9fbc0' }
+        ]);
+
+        // Define Edges (Directed Arrows)
+        var edges = new vis.DataSet([
+            { from: 'A', to: 'plus', arrows: 'to' },
+            { from: 'B', to: 'plus', arrows: 'to' },
+            { from: 'plus', to: 'A_plus_B', arrows: 'to' },
+            
+            { from: 'A', to: 'minus', arrows: 'to' },
+            { from: 'B', to: 'minus', arrows: 'to' },
+            { from: 'minus', to: 'A_minus_B', arrows: 'to' },
+            
+            { from: 'A_plus_B', to: 'mul', arrows: 'to' },
+            { from: 'A_minus_B', to: 'mul', arrows: 'to' },
+            { from: 'mul', to: 'Result', arrows: 'to' }
+        ]);
+
+        var container = document.getElementById('network-container');
+        var data = { nodes: nodes, edges: edges };
+        var options = {
+            physics: { enabled: true, repulsion: { nodeDistance: 100 } }
+        };
+        
+        // Initialize Graph
+        var network = new vis.Network(container, data, options);
+    </script>
+</body>
+</html>
