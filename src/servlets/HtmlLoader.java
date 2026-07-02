@@ -8,16 +8,34 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import server.RequestParser.RequestInfo;
-
+/**
+ * A servlet responsible for loading static HTML files.
+ *
+ * <p>The servlet receives requests under a configured URI prefix,
+ * extracts the requested file name from the URI segments, loads the file
+ * from the configured HTML directory, and returns it as an HTTP response.</p>
+ *
+ * <p>If the requested file does not exist, an HTML error response is returned.</p>
+ */
 public class HtmlLoader implements Servlet {
 
     private final String baseDirectory;
-
+/**
+ * Creates a new HTML loader servlet.
+ *
+ * @param htmlFolder the folder containing the static HTML files
+ */
     // The constructor takes the folder name so it isn't hard-coded
     public HtmlLoader(String baseDirectory) {
         this.baseDirectory = baseDirectory;
     }
-
+/**
+ * Handles a request for a static HTML file.
+ *
+ * @param ri parsed request information
+ * @param toClient stream used to send the HTTP response to the client
+ * @throws IOException if reading the file or writing to the client fails
+ */
     @Override
     public void handle(RequestInfo ri, OutputStream toClient) throws IOException {
         
@@ -64,7 +82,13 @@ public class HtmlLoader implements Servlet {
         
         toClient.flush();
     }
-
+/**
+ * Closes the servlet.
+ *
+ * <p>This implementation does not hold external resources.</p>
+ *
+ * @throws IOException never thrown by this implementation
+ */
     @Override
     public void close() throws IOException { }
     
