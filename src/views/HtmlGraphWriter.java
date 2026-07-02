@@ -9,9 +9,23 @@ import java.util.List;
 
 import configs.Graph;
 import configs.Node;
-
+/**
+ * Generates an HTML representation of a computational graph.
+ *
+ * <p>The class converts a {@link Graph} object into HTML and JavaScript
+ * code that can be displayed in the browser. Topics and agents are drawn
+ * differently in order to make the computational structure easier to
+ * understand.</p>
+ *
+ * <p>This class belongs to the view layer of the project.</p>
+ */
 public class HtmlGraphWriter {
-	
+	/**
+ * Generates HTML lines representing the given graph.
+ *
+ * @param graph the computational graph to visualize
+ * @return a list of HTML lines that render the graph in the browser
+ */
 	// this method get graph and return list of strings that are html describe of the graph
 	// i.e generates an HTML representation of the provided computational graph
     public static List<String> getGraphHTML(Graph graph, String templateDir) {
