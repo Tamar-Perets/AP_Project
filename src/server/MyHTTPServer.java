@@ -20,7 +20,19 @@ import java.util.concurrent.TimeUnit;
 import server.RequestParser.RequestInfo;
 import servlets.Servlet;
 
-
+/**
+ * A simple multithreaded implementation of {@link HTTPServer}.
+ *
+ * <p>The server listens for client connections on a given port and
+ * dispatches requests to registered servlets using a fixed-size
+ * thread pool.</p>
+ *
+ * <p>Servlet matching is based on HTTP method and longest matching
+ * URI prefix.</p>
+ *
+ * @author Ofek Sharon
+ * @author Tamar Perets
+ */
 public class MyHTTPServer extends Thread implements HTTPServer{
 	
 	final int port;
@@ -31,7 +43,12 @@ public class MyHTTPServer extends Thread implements HTTPServer{
 	private ExecutorService threadPool;
 	private ServerSocket serverSocket;
 	private volatile boolean stop;
-    
+    /**
+ * Creates a new HTTP server.
+ *
+ * @param port the port on which the server listens
+ * @param nThreads the maximum number of worker threads used to handle clients
+ */
 	// constructor
     public MyHTTPServer(int port,int nThreads){
     	this.port = port;
@@ -126,7 +143,12 @@ public class MyHTTPServer extends Thread implements HTTPServer{
         	return;
     	}
     }
-    
+    /**
+ * Runs the main server loop.
+ *
+ * <p>The loop waits for client connections and sends each accepted
+ * socket to the thread pool for processing.</p>
+ */
     // this method is the main method run (handle requests & clients etc.)
 	    @Override
 	public void run() {
@@ -240,7 +262,10 @@ public class MyHTTPServer extends Thread implements HTTPServer{
             }
         }
     }
-    
+    /**
+ * Stops the server, closes the server socket, shuts down the thread pool
+ * and closes all registered servlets.
+ */
     // this method close the server, including close all running threads etc.
     @Override
     public void close(){
