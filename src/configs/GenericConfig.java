@@ -1,4 +1,4 @@
-package configs;	// TODO: for project, change package name to configs
+package configs;	
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -10,7 +10,13 @@ import graph.ParallelAgent;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
-
+/**
+ * Loads a computational configuration from a text file.
+ *
+ * <p>The configuration file defines agents using class names,
+ * subscribed topics and published topics. Agents are created dynamically
+ * using Java Reflection.</p>
+ */
 public class GenericConfig implements Config {
 	
 	private String confFile;
@@ -21,12 +27,18 @@ public class GenericConfig implements Config {
 		this.confFile = null;
 		agentsList = new ArrayList<Agent>();
 	}
-	
+	/**
+ * Sets the configuration file path.
+ *
+ * @param filename path to the configuration file
+ */
 	// set configuration file name
 	public void setConfFile(String confFile) {
 		this.confFile = confFile;
 	}
-	
+	/**
+ * Reads the configuration file and creates the defined agents.
+ */
 	// this method create the agents that are define in file confFile
 	//		each agent define by 3 lines: 1. full name  2. topic to subscribe to  3. topic to publish to
 	@Override
@@ -85,7 +97,9 @@ public class GenericConfig implements Config {
 	public int getVersion() {
 		return 1;
 	}
-
+/**
+ * Closes all agents created by this configuration.
+ */
 	@Override
 	public void close() {
 		this.agentsList.forEach(a -> a.close());
