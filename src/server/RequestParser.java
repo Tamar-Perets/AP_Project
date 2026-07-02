@@ -10,9 +10,35 @@ import java.util.List;
 import java.util.Map;
 
 
-
+/**
+ * Parses raw HTTP requests into structured {@link RequestInfo} objects.
+ *
+ * <p>This parser is designed for the lightweight HTTP server used in this
+ * project. It extracts the HTTP command, URI, URI segments, query parameters,
+ * optional body parameters and content bytes.</p>
+ *
+ * <p>The parser supports requests such as:</p>
+ *
+ * <pre>{@code
+ * GET /publish?topicName=A&message=5 HTTP/1.1
+ * Host: localhost
+ *
+ * }</pre>
+ *
+ * @author Ofek Sharon
+ * @author Tamar Perets
+ */
 public class RequestParser {
-	
+	/**
+ * Parses a single HTTP request from the given reader.
+ *
+ * <p>The method reads the request line, headers, optional key-value
+ * parameters after the headers, and the content section.</p>
+ *
+ * @param reader the input source containing the HTTP request
+ * @return a {@link RequestInfo} object containing the parsed request data
+ * @throws IOException if reading from the input source fails
+ */
     public static RequestInfo parseRequest(BufferedReader reader) throws IOException {        
 		// read the first line of the request
     	String firstLine = reader.readLine();
@@ -143,7 +169,12 @@ public class RequestParser {
         // create and return RequestInfo object that has all neccessary data
         return new RequestInfo(command, fullUri, uriSegments, parameters, content);
     }
-	
+	/**
+ * Holds the parsed information extracted from an HTTP request.
+ *
+ * <p>The object contains the HTTP command, the original URI, URI path
+ * segments, request parameters and optional content bytes.</p>
+ */
 	// RequestInfo given internal class
     public static class RequestInfo {
         private final String httpCommand;
@@ -151,7 +182,15 @@ public class RequestParser {
         private final String[] uriSegments;
         private final Map<String, String> parameters;
         private final byte[] content;
-
+		/**
+		 * Creates a new parsed request information object.
+		 *
+		 * @param httpCommand the HTTP method, such as GET or POST
+		 * @param uri the original URI, including query parameters if present
+		 * @param uriSegments the URI path split into segments
+		 * @param parameters request parameters extracted from the URI or body
+		 * @param content raw request content bytes
+		 */
         public RequestInfo(String httpCommand, String uri, String[] uriSegments, Map<String, String> parameters, byte[] content) {
             this.httpCommand = httpCommand;
             this.uri = uri;
@@ -159,27 +198,37 @@ public class RequestParser {
             this.parameters = parameters;
             this.content = content;
         }
-        
+		        /**
+		 * @return the HTTP command of the request
+		 */
         // return http method (for example GET, POST, etc.)
         public String getHttpCommand() {
             return httpCommand;
         }
-        
+		        /**
+		 * @return the original URI of the request
+		 */
         // return full uri (for example /api/resource?id=123&name=test)
         public String getUri() {
             return uri;
         }
-        
+        /**
+		 * @return the URI path split into segments
+		 */
         // return the segments of the uri (for example “resource “,”api").
         public String[] getUriSegments() {
             return uriSegments;
         }
-        
+		/**
+		 * @return the request parameters as key-value pairs
+		 */
         // return map of parameters (keys) and their value (for example id = 123, name = test)
         public Map<String, String> getParameters() {
             return parameters;
         }
-        
+        /**
+		 * @return the raw content bytes of the request
+		 */
         // return http request content
         public byte[] getContent() {
             return content;
