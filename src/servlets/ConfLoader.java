@@ -11,9 +11,29 @@ import server.RequestParser.RequestInfo;
 import views.HtmlGraphWriter;
 import configs.GenericConfig;
 import configs.Graph;
-
+/**
+ * A servlet responsible for loading computational configuration files.
+ *
+ * <p>The servlet handles configuration upload requests. It extracts the
+ * uploaded file name and content from the request, saves the configuration
+ * on the server side, loads it using {@link GenericConfig}, builds a
+ * {@link Graph} from the resulting topics and agents, and returns an HTML
+ * visualization of the graph.</p>
+ *
+ * <p>The graph visualization is delegated to {@link HtmlGraphWriter}.</p>
+ */
 public class ConfLoader implements Servlet {
-
+/**
+ * Handles a configuration upload request.
+ *
+ * <p>The method saves the uploaded configuration, creates the computational
+ * network, builds a graph from the current topics and agents, and writes an
+ * HTML response containing the graph visualization.</p>
+ *
+ * @param ri parsed request information containing the uploaded content
+ * @param toClient stream used to send the generated graph HTML
+ * @throws IOException if saving the file or writing the response fails
+ */
     @Override
     public void handle(RequestInfo ri, OutputStream toClient) throws IOException {
         
@@ -73,7 +93,11 @@ public class ConfLoader implements Servlet {
             sendError(toClient, 500, "Internal Server Error: Could not process configuration.");
         }
     }
-
+/**
+ * Closes the current configuration if one was loaded.
+ *
+ * @throws IOException never thrown directly by this implementation
+ */
     @Override
     public void close() throws IOException {}
 
