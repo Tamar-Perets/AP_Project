@@ -1,5 +1,4 @@
-package configs;	// TODO: for project, change package name to configs
-	//TODO update path at simple.conf
+package configs;	
 
 
 import graph.Agent;
