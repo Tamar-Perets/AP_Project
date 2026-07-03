@@ -1,4 +1,4 @@
-package graph; // TODO: for project, change package name to graph
+package graph; 
 
 public interface Agent {
 	String getName();
