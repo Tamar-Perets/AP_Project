@@ -1,5 +1,4 @@
-package configs; // TODO: for project, change package name to configs
-
+package configs; 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
