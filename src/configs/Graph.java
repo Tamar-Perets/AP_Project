@@ -1,4 +1,4 @@
-package configs; // package configs
+package configs;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -10,68 +10,70 @@ import graph.TopicManagerSingleton;
 import graph.TopicManagerSingleton.TopicManager;
 
 @SuppressWarnings("serial")
-public class Graph extends ArrayList<Node>{
-	private TopicManager tm;	
-    
-	public Graph() {
-		tm = TopicManagerSingleton.get();
-	}
-	
-	// this method checks for cycles in the graph
+public class Graph extends ArrayList<Node> {
+    private TopicManager tm;
+
+    public Graph() {
+        tm = TopicManagerSingleton.get();
+    }
+
     public boolean hasCycles() {
-    	for (Node node : this) 
-    		if (node.hasCycles())
-    			return true;
+        for (Node node : this) {
+            if (node.hasCycles()) {
+                return true;
+            }
+        }
         return false;
     }
-    
-    // this methods create the graph from current topics & agents that are in the TopicManager
-    public void createFromTopics(){
-    	// clear old version if exidt
-    	this.clear();
-    	
-    	Collection<Topic> topics =	tm.getTopics();
-    	Node topicNode;
-    	ArrayList<Node> topicNeighbors;
-    	HashMap<String, Node> agents = new HashMap<>();
-    	
-    	for (Topic topic : topics) {
-    		// add topic as a node
-    		topicNode = new Node("T" + topic.name);
-    		this.add(topicNode);
-    		
-    		// go over the agents of the node, add node and edges
-    		topicNeighbors = new ArrayList<Node>();
-    		
-    		// go over the subscribers
-    		for (Agent agent : topic.getSubs()) {
-    			String agentNodeName = "A" + agent.getName();
-    			// if not exist create node
-    			if (!agents.containsKey(agentNodeName)) {
-    			    Node newAgentNode = new Node(agentNodeName);
-    			    this.add(newAgentNode);
-    			    agents.put(agentNodeName, newAgentNode);
-    			}
-    			Node agentNode = agents.get(agentNodeName);
-    			// add to list
-    			topicNeighbors.add(agentNode);	
-    		}
-    		// update topic node's neighbors
-    		topicNode.setEdges(topicNeighbors);
-    		
-    		// go over the publishers
-    		for (Agent agent : topic.getPubs()) {
-    			String agentNodeName = "A" + agent.getName();
-    			// if not exist create node
-    			if (!agents.containsKey(agentNodeName)) {
-    			    Node newAgentNode = new Node(agentNodeName);
-    			    this.add(newAgentNode);
-    			    agents.put(agentNodeName, newAgentNode);
-    			}
-    			// add topic to the node neighbors
-    			agents.get(agentNodeName).addEdge(topicNode);
-    		}
-    	}
-    	
-    }      
+
+    public void createFromTopics() {
+        this.clear();
+
+        Collection<Topic> topics = tm.getTopics();
+
+        HashMap<Agent, Node> agents = new HashMap<>();
+        HashMap<String, Integer> agentNameCounter = new HashMap<>();
+
+        for (Topic topic : topics) {
+            Node topicNode = new Node("T" + topic.name);
+            this.add(topicNode);
+
+            ArrayList<Node> topicNeighbors = new ArrayList<>();
+
+            for (Agent agent : topic.getSubs()) {
+                Node agentNode = getOrCreateAgentNode(agent, agents, agentNameCounter);
+                topicNeighbors.add(agentNode);
+            }
+
+            topicNode.setEdges(topicNeighbors);
+
+            for (Agent agent : topic.getPubs()) {
+                Node agentNode = getOrCreateAgentNode(agent, agents, agentNameCounter);
+                agentNode.addEdge(topicNode);
+            }
+        }
+    }
+
+    private Node getOrCreateAgentNode(
+            Agent agent,
+            HashMap<Agent, Node> agents,
+            HashMap<String, Integer> agentNameCounter) {
+
+        if (agents.containsKey(agent)) {
+            return agents.get(agent);
+        }
+
+        String baseName = "A" + agent.getName();
+
+        int count = agentNameCounter.getOrDefault(baseName, 0) + 1;
+        agentNameCounter.put(baseName, count);
+
+        String uniqueName = count == 1 ? baseName : baseName + "_" + count;
+
+        Node newAgentNode = new Node(uniqueName);
+        this.add(newAgentNode);
+        agents.put(agent, newAgentNode);
+
+        return newAgentNode;
+    }
 }
