@@ -1,4 +1,4 @@
-package graph; // TODO: for project, move to package name to graph
+package graph; 
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Collection;
