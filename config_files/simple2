@@ -1,0 +1,11 @@
+configs.PlusAgent
+A,B
+SUM
+
+configs.PlusAgent
+SUM,C
+TOTAL
+
+configs.IncAgent
+TOTAL
+RESULT
