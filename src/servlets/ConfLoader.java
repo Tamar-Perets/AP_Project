@@ -2,165 +2,184 @@ package servlets;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.ArrayList;
 
 import server.RequestParser.RequestInfo;
 import views.HtmlGraphWriter;
 import configs.GenericConfig;
 import configs.Graph;
 /**
- * A servlet responsible for loading computational configuration files.
+ * A servlet responsible for loading computational graph configurations.
  *
- * <p>The servlet handles configuration upload requests. It extracts the
- * uploaded file name and content from the request, saves the configuration
- * on the server side, loads it using {@link GenericConfig}, builds a
- * {@link Graph} from the resulting topics and agents, and returns an HTML
- * visualization of the graph.</p>
+ * <p>This servlet receives a configuration file uploaded by the user,
+ * extracts the configuration content, saves it temporarily on the server,
+ * loads it using {@link configs.GenericConfig}, builds the corresponding
+ * computational graph, and returns an HTML visualization of the graph.</p>
  *
- * <p>The graph visualization is delegated to {@link HtmlGraphWriter}.</p>
+ * <p>The generated graph is displayed in the application's central panel.</p>
+ *
+ * @author Ofek Sharon
+ * @author Tamar Perets
  */
 public class ConfLoader implements Servlet {
-/**
- * Handles a configuration upload request.
- *
- * <p>The method saves the uploaded configuration, creates the computational
- * network, builds a graph from the current topics and agents, and writes an
- * HTML response containing the graph visualization.</p>
- *
- * @param ri parsed request information containing the uploaded content
- * @param toClient stream used to send the generated graph HTML
- * @throws IOException if saving the file or writing the response fails
- */
+	/**
+	 * Handles an uploaded configuration file.
+	 *
+	 * <p>The uploaded configuration is extracted from the multipart HTTP
+	 * request, written to a temporary file, loaded into the system,
+	 * converted into a graph representation, and returned to the client
+	 * as an HTML page.</p>
+	 *
+	 * @param ri the parsed HTTP request containing the uploaded configuration
+	 * @param toClient the output stream used to send the HTML response
+	 * @throws IOException if reading the uploaded file or writing the response fails
+	 */
     @Override
     public void handle(RequestInfo ri, OutputStream toClient) throws IOException {
-        
+
         byte[] rawContent = ri.getContent();
-        
-        // Handle empty requests safely
+
         if (rawContent == null || rawContent.length == 0) {
             sendError(toClient, 400, "Bad Request: No file content found.");
             return;
         }
 
-        // 1. Extract the pure text from the HTTP multipart form data
-        String rawBody = new String(rawContent);
-        String fileContent = extractFileText(rawBody);
-
         try {
-            // 2. Safely create the "configs" directory if it doesn't exist
+            String rawBody = new String(rawContent, StandardCharsets.UTF_8);
+            String fileContent = extractConfigContent(rawBody);
+
             Path configDir = Paths.get("configs");
             if (!Files.exists(configDir)) {
                 Files.createDirectories(configDir);
             }
-            
-            // 3. Save the uploaded text to a temporary physical file
-            Path tempConfFile = Paths.get("configs", "uploaded_conf.txt");
-            Files.write(tempConfFile, fileContent.getBytes());
 
-            // 4. Initialize GenericConfig with the new file
+            Path tempConfFile = Paths.get("configs", "uploaded_conf.txt");
+            Files.write(tempConfFile, fileContent.getBytes(StandardCharsets.UTF_8));
+
+            System.out.println("===== Uploaded config content =====");
+            System.out.println(fileContent);
+            System.out.println("===== End uploaded config content =====");
+
             GenericConfig config = new GenericConfig();
             config.setConfFile(tempConfFile.toString());
-            config.create(); // Creates agents and populates the TopicManagerSingleton
-            
-            // 5. Build the Graph from the Singleton data
-            Graph myGraph = new Graph();
-            myGraph.createFromTopics();
+            config.create();
 
-            // 6. Generate the HTML view using your HtmlGraphWriter
-            List<String> htmlResponseLines = HtmlGraphWriter.getGraphHTML(myGraph, "html_files");
-            
+            Graph graph = new Graph();
+            graph.createFromTopics();
+
+            List<String> htmlLines = HtmlGraphWriter.getGraphHTML(graph, "html_files");
+
             StringBuilder htmlBody = new StringBuilder();
-            for (String line : htmlResponseLines) {
+            for (String line : htmlLines) {
                 htmlBody.append(line).append("\n");
             }
-            String finalHtml = htmlBody.toString();
 
-            // 7. Send the HTTP 200 OK Response
-            String header = "HTTP/1.1 200 OK\r\n" +
-                            "Content-Type: text/html\r\n" +
-                            "Content-Length: " + finalHtml.getBytes().length + "\r\n\r\n";
-                            
-            toClient.write(header.getBytes());
-            toClient.write(finalHtml.getBytes());
-            toClient.flush();
+            sendHtml(toClient, htmlBody.toString());
 
         } catch (Exception e) {
             System.err.println("Error loading configuration: " + e.getMessage());
-            e.printStackTrace(); // Helpful for debugging
+            e.printStackTrace();
             sendError(toClient, 500, "Internal Server Error: Could not process configuration.");
         }
     }
-/**
- * Closes the current configuration if one was loaded.
- *
- * @throws IOException never thrown directly by this implementation
- */
-    @Override
-    public void close() throws IOException {}
-
     /**
-     * A robust method to strip multipart/form-data HTTP boundaries.
-     * It dynamically finds the boundary string and reads line-by-line
-     * to guarantee headers are ignored.
+     * Extracts the configuration text from a multipart/form-data HTTP request.
+     *
+     * <p>The method removes multipart boundaries and HTTP headers, returning
+     * only the actual configuration file content.</p>
+     *
+     * @param rawBody the raw multipart request body
+     * @return the extracted configuration text
      */
-    private String extractFileText(String rawBody) {
-        // Split the string into lines, handling BOTH Windows (\r\n) and Unix (\n)
-        String[] lines = rawBody.split("\\r?\\n");
-        
-        // If it's too short, it's not a multipart form
-        if (lines.length < 4) {
-            return rawBody; 
-        }
+    private String extractConfigContent(String rawBody) {
+        String normalized = rawBody.replace("\r\n", "\n");
 
-        // The first line of the request is ALWAYS the browser's generated boundary
-        String boundary = lines[0]; 
-        
-        // If it doesn't start with "--", it's not multipart, return as is
-        if (!boundary.startsWith("--")) {
-            return rawBody; 
-        }
+        String[] lines = normalized.split("\n");
+        List<String> cleanLines = new ArrayList<>();
 
-        int contentStartLine = -1;
-        
-        // Loop to find the empty line that separates headers from the actual file content
-        for (int i = 1; i < lines.length; i++) {
-            if (lines[i].trim().isEmpty()) {
-                contentStartLine = i + 1; // The file content starts on the next line
-                break;
+        boolean insideFileContent = false;
+
+        for (String line : lines) {
+            String trimmed = line.trim();
+
+            if (trimmed.startsWith("--")) {
+                if (insideFileContent) {
+                    break;
+                }
+                continue;
+            }
+
+            if (trimmed.toLowerCase().startsWith("content-disposition:")) {
+                insideFileContent = false;
+                continue;
+            }
+
+            if (trimmed.toLowerCase().startsWith("content-type:")) {
+                continue;
+            }
+
+            if (trimmed.isEmpty()) {
+                if (!insideFileContent) {
+                    insideFileContent = true;
+                }
+                continue;
+            }
+
+            if (insideFileContent) {
+                cleanLines.add(line.trim());
             }
         }
 
-        // If we never found an empty line, something is wrong, return raw
-        if (contentStartLine == -1) {
-            return rawBody;
+        if (cleanLines.isEmpty()) {
+            return rawBody.trim();
         }
 
-        // Read the actual file content until we hit the bottom boundary
-        StringBuilder cleanContent = new StringBuilder();
-        for (int i = contentStartLine; i < lines.length; i++) {
-            if (lines[i].startsWith(boundary)) {
-                break; // Stop reading! We hit the bottom WebKit boundary
-            }
-            cleanContent.append(lines[i]).append("\n");
-        }
-
-        // Return the clean string, trimming off any extra trailing whitespace/newlines
-        return cleanContent.toString().trim();
+        return String.join("\n", cleanLines);
     }
-    
     /**
-     * Helper method to cleanly send HTTP errors back to the browser.
+     * Sends a complete HTTP response containing an HTML document.
+     *
+     * @param toClient the client output stream
+     * @param html the HTML document to send
+     * @throws IOException if writing to the client fails
+     */
+    private void sendHtml(OutputStream toClient, String html) throws IOException {
+        byte[] bodyBytes = html.getBytes(StandardCharsets.UTF_8);
+
+        String header =
+                "HTTP/1.1 200 OK\r\n" +
+                "Content-Type: text/html; charset=UTF-8\r\n" +
+                "Content-Length: " + bodyBytes.length + "\r\n" +
+                "\r\n";
+
+        toClient.write(header.getBytes(StandardCharsets.UTF_8));
+        toClient.write(bodyBytes);
+        toClient.flush();
+    }
+    /**
+     * Sends an HTTP error response to the client.
+     *
+     * @param toClient the client output stream
+     * @param statusCode the HTTP status code
+     * @param message the error message displayed in the HTML page
+     * @throws IOException if writing to the client fails
      */
     private void sendError(OutputStream toClient, int statusCode, String message) throws IOException {
-        String html = "<html><body><h2>Error " + statusCode + "</h2><p>" + message + "</p></body></html>";
-        String header = "HTTP/1.1 " + statusCode + " Error\r\n" +
-                        "Content-Type: text/html\r\n" +
-                        "Content-Length: " + html.getBytes().length + "\r\n\r\n";
-        toClient.write(header.getBytes());
-        toClient.write(html.getBytes());
-        toClient.flush();
+        String html =
+                "<html><body>" +
+                "<h2>Error " + statusCode + "</h2>" +
+                "<p>" + message + "</p>" +
+                "</body></html>";
+
+        sendHtml(toClient, html);
+    }
+
+    @Override
+    public void close() throws IOException {
     }
 }
