@@ -1,4 +1,4 @@
-package configs;  // TODO: for project, change package name to configs
+package configs; 
 
 import java.util.function.BinaryOperator;
 
@@ -12,7 +12,7 @@ public class BinOpAgent implements Agent {
 	private Topic topic1, topic2;	// Topics from which we get inputs
 	private double inputTopic1, inputTopic2; // The inputs from the topics
 	private Topic outTopic;		// topic to sent the result to
-	private BinaryOperator<Double> operation;	// The operations (lmbdaexpression) to do on the inputs
+	private BinaryOperator<Double> operation;	// The operations to do on the inputs
 	
 	// Constructor
 	// assuming the topics exist and that the object exist from now on
