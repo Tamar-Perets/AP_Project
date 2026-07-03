@@ -13,6 +13,7 @@ import server.RequestParser.RequestInfo;
 import views.HtmlGraphWriter;
 import configs.GenericConfig;
 import configs.Graph;
+
 /**
  * A servlet responsible for loading computational graph configurations.
  *
@@ -27,18 +28,19 @@ import configs.Graph;
  * @author Tamar Perets
  */
 public class ConfLoader implements Servlet {
-	/**
-	 * Handles an uploaded configuration file.
-	 *
-	 * <p>The uploaded configuration is extracted from the multipart HTTP
-	 * request, written to a temporary file, loaded into the system,
-	 * converted into a graph representation, and returned to the client
-	 * as an HTML page.</p>
-	 *
-	 * @param ri the parsed HTTP request containing the uploaded configuration
-	 * @param toClient the output stream used to send the HTML response
-	 * @throws IOException if reading the uploaded file or writing the response fails
-	 */
+
+    /**
+     * Handles an uploaded configuration file.
+     *
+     * <p>The uploaded configuration is extracted from the multipart HTTP
+     * request, written to a temporary file, loaded into the system,
+     * converted into a graph representation, and returned to the client
+     * as an HTML page.</p>
+     *
+     * @param ri the parsed HTTP request containing the uploaded configuration
+     * @param toClient the output stream used to send the HTML response
+     * @throws IOException if reading the uploaded file or writing the response fails
+     */
     @Override
     public void handle(RequestInfo ri, OutputStream toClient) throws IOException {
 
@@ -60,10 +62,6 @@ public class ConfLoader implements Servlet {
 
             Path tempConfFile = Paths.get("configs", "uploaded_conf.txt");
             Files.write(tempConfFile, fileContent.getBytes(StandardCharsets.UTF_8));
-
-            System.out.println("===== Uploaded config content =====");
-            System.out.println(fileContent);
-            System.out.println("===== End uploaded config content =====");
 
             GenericConfig config = new GenericConfig();
             config.setConfFile(tempConfFile.toString());
@@ -87,6 +85,7 @@ public class ConfLoader implements Servlet {
             sendError(toClient, 500, "Internal Server Error: Could not process configuration.");
         }
     }
+
     /**
      * Extracts the configuration text from a multipart/form-data HTTP request.
      *
@@ -141,6 +140,7 @@ public class ConfLoader implements Servlet {
 
         return String.join("\n", cleanLines);
     }
+
     /**
      * Sends a complete HTTP response containing an HTML document.
      *
@@ -161,6 +161,7 @@ public class ConfLoader implements Servlet {
         toClient.write(bodyBytes);
         toClient.flush();
     }
+
     /**
      * Sends an HTTP error response to the client.
      *
@@ -179,6 +180,14 @@ public class ConfLoader implements Servlet {
         sendHtml(toClient, html);
     }
 
+    /**
+     * Releases resources associated with this servlet.
+     *
+     * <p>This implementation does not allocate external resources,
+     * therefore no cleanup is required.</p>
+     *
+     * @throws IOException never thrown by this implementation
+     */
     @Override
     public void close() throws IOException {
     }
