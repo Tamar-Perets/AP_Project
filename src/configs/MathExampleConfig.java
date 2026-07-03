@@ -1,4 +1,4 @@
-package configs;	// TODO: for project, change package name to configs
+package configs;	
 
 public class MathExampleConfig implements Config {
 
